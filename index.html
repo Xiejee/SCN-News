@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SCN - Songhe Class News</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/remixicon/3.5.0/remixicon.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <style>
+        :root {
+            --scn-primary: #0056b3;
+            --scn-accent: #00a8ff;
+            --scn-bg: #f5f7fa;
+            --scn-card: #ffffff;
+            --scn-text: #1a202c;
+            --scn-sub: #718096;
+            --ease-out: cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        body {
+            font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background: var(--scn-bg); margin: 0; color: var(--scn-text);
+            overflow-x: hidden;
+        }
+
+        /* --- 顶栏设计 --- */
+        .navbar {
+            background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(15px);
+            padding: 10px 5%; display: flex; align-items: center; justify-content: space-between;
+            position: sticky; top: 0; z-index: 1000; box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+
+        /* CSS 绘制的简约 Logo */
+        .scn-logo {
+            font-size: 1.6rem; font-weight: 900; cursor: pointer;
+            user-select: none; transition: transform 0.2s;
+        }
+        .scn-logo span.primary { color: var(--scn-primary); }
+        .scn-logo span.accent { color: var(--scn-accent); font-weight: 300; font-size: 1.2rem; }
+        .scn-logo:active { transform: scale(0.95); }
+
+        .search-box {
+            flex: 1; max-width: 350px; margin: 0 15px; position: relative;
+        }
+        .search-box input {
+            width: 100%; padding: 8px 15px 8px 35px; border-radius: 10px;
+            border: 1px solid #e2e8f0; background: #edf2f7; outline: none; transition: 0.3s;
+        }
+        .search-box input:focus { background: #fff; border-color: var(--scn-accent); box-shadow: 0 0 0 3px rgba(0,168,255,0.1); }
+        .search-box i { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--scn-sub); }
+
+        /* --- 视图切换 --- */
+        .view { display: none; padding: 20px 5%; animation: slideUp 0.5s var(--ease-out) forwards; }
+        .view.active { display: block; }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* --- 首页模块卡片 --- */
+        .home-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-top: 20px;
+        }
+        .module-card {
+            background: var(--scn-card); padding: 25px 15px; border-radius: 18px;
+            text-align: center; cursor: pointer; transition: all 0.3s var(--ease-out);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.02); border: 1px solid #edf2f7;
+        }
+        .module-card:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.05); border-color: var(--scn-accent); }
+        .module-card i { font-size: 2.5rem; color: var(--scn-accent); margin-bottom: 12px; display: block; }
+        .module-card span { font-weight: bold; font-size: 1.05rem; }
+
+        /* --- 文章列表 & 详情 --- */
+        .news-item {
+            background: #fff; padding: 20px; border-radius: 14px; margin-bottom: 12px;
+            display: flex; justify-content: space-between; align-items: center;
+            cursor: pointer; transition: 0.2s; border: 1px solid #f0f0f0;
+        }
+        .news-item:hover { background: #f8faff; border-color: var(--scn-accent); }
+        .item-meta { font-size: 0.85rem; color: var(--scn-sub); }
+
+        .detail-card { background: #fff; padding: 30px; border-radius: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        .article-img {
+            width: 100%; max-width: 100%; border-radius: 12px; 
+            margin: 15px 0; box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            display: block; object-fit: cover;
+        }
+        .back-btn { margin-bottom: 20px; cursor: pointer; color: var(--scn-primary); display: inline-flex; align-items: center; gap: 5px; font-weight: bold; }
+
+        /* --- 设置界面 --- */
+        .settings-container { max-width: 600px; margin: 0 auto; }
+        .set-group { background: #fff; padding: 20px; border-radius: 18px; margin-bottom: 20px; }
+        .set-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #f7fafc; }
+        .download-btn {
+            background: var(--scn-primary); color: white; padding: 10px 20px; border-radius: 10px;
+            text-decoration: none; font-size: 0.9rem; font-weight: bold; transition: 0.3s;
+        }
+        .download-btn:hover { background: var(--scn-accent); transform: scale(1.05); }
+        .version-tag { background: #ebf8ff; color: #3182ce; padding: 2px 8px; border-radius: 6px; font-size: 0.8rem; font-family: monospace; }
+        .update-dot { width: 8px; height: 8px; background: #f56565; border-radius: 50%; display: inline-block; margin-left: 5px; }
+
+        #loader { text-align: center; padding: 40px; }
+    </style>
+</head>
+<body>
+
+    <nav class="navbar">
+        <div class="scn-logo" id="mainLogo">
+            <span class="primary">SCN</span><span class="accent">News</span>
+        </div>
+        <div class="search-box">
+            <i class="ri-search-line"></i>
+            <input type="text" id="globalSearch" placeholder="搜索文章...">
+        </div>
+        <div style="width: 40px;"></div> </nav>
+
+    <div id="view-home" class="view active">
+        <h2 style="text-align:center; margin-bottom:30px;">选择内容板块</h2>
+        <div class="home-grid">
+            <div class="module-card" onclick="switchCategory('all')">
+                <i class="ri-apps-2-line"></i><span>全部文章</span>
+            </div>
+            <div class="module-card" onclick="switchCategory('news_')">
+                <i class="ri-newspaper-line"></i><span>常规新闻</span>
+            </div>
+            <div class="module-card" onclick="switchCategory('week_')">
+                <i class="ri-calendar-todo-line"></i><span>新闻周刊</span>
+            </div>
+            <div class="module-card" onclick="switchCategory('poem_')">
+                <i class="ri-quill-pen-line"></i><span>诗词鉴赏</span>
+            </div>
+            <div class="module-card" onclick="showView('settings')">
+                <i class="ri-settings-line"></i><span>程序设置</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="view-list" class="view">
+        <div class="back-btn" onclick="showView('home')"><i class="ri-arrow-left-s-line"></i> 返回主页</div>
+        <h3 id="listTitle">内容列表</h3>
+        <div id="listContainer"></div>
+    </div>
+
+    <div id="view-detail" class="view">
+        <div class="back-btn" onclick="goBackToList()"><i class="ri-arrow-left-s-line"></i> 返回列表</div>
+        <div id="detailContainer" class="detail-card"></div>
+    </div>
+
+    <div id="view-settings" class="view">
+        <div class="back-btn" onclick="showView('home')"><i class="ri-arrow-left-s-line"></i> 返回主页</div>
+        <div class="settings-container">
+            <div class="set-group">
+                <h3><i class="ri-information-line"></i> 关于程序</h3>
+                <div class="set-item"><span>程序名称</span><span>SCN (Songhe Class News)</span></div>
+                <div class="set-item"><span>当前版本</span><span class="version-tag">3.0.0.20260124</span></div>
+                <div class="set-item"><span>更新日期</span><span>2026年1月24日</span></div>
+                <div class="set-item"><span>开发者</span><span>JEEX (2428943240@qq.com)</span></div>
+            </div>
+            <div class="set-group">
+                <h3><i class="ri-download-cloud-line"></i> 客户端与更新</h3>
+                <div class="set-item">
+                    <div>最新版本 <span id="latestVerLabel" class="version-tag">检测中...</span></div>
+                    <a id="downloadBtn" href="https://github.com/Xiejee/SCN-News/raw/main/SCN%20for%20Android.apk" class="download-btn">下载 Android 版</a>
+                </div>
+                <div style="margin-top:15px; font-size:0.85rem; color:var(--scn-sub);">
+                    <b>V3.0 更新日志：</b><br>
+                    • 架构升级：全新首页模块化分类入口。<br>
+                    • 富媒体支持：支持文章内嵌入图片展示功能。<br>
+                    • 全局搜索：支持全类别文章标题实时检索。<br>
+                    • 自动更新：集成版本检测与 APK 下载引导。
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="loader" style="display:none;"><i class="ri-loader-4-line"></i> 同步中...</div>
+
+<script>
+    // --- 核心配置 ---
+    const CONFIG = {
+        user: 'Xiejee',
+        repo: 'SCN-News',
+        path: 'news',
+        img_path: 'pictures',
+        currentVer: '3.0.0.20260124'
+    };
+
+    let allFiles = []; // 存储所有扫描到的文件元数据
+    let lastCategory = 'all';
+
+    // --- 视图切换逻辑 ---
+    function showView(viewId) {
+        document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+        document.getElementById('view-' + viewId).classList.add('active');
+        window.scrollTo(0,0);
+    }
+
+    function goBackToList() { showView('list'); }
+
+    // --- 初始化加载数据 (仅列表) ---
+    async function initData() {
+        const loader = document.getElementById('loader');
+        loader.style.display = 'block';
+        try {
+            const url = `https://api.github.com/repos/${CONFIG.user}/${CONFIG.repo}/contents/${CONFIG.path}`;
+            const res = await fetch(url);
+            const data = await res.json();
+            
+            // 筛选出符合命名前缀的 TXT 文件
+            allFiles = data.filter(f => f.name.endsWith('.txt'));
+            
+            // 预加载详情信息（为了排序和搜索）
+            const detailedPromises = allFiles.map(async f => {
+                const textRes = await fetch(f.download_url);
+                const text = await textRes.text();
+                const title = (text.match(/TITLE:\s*(.*)/i) || [])[1] || f.name;
+                const date = (text.match(/DATE:\s*(.*)/i) || [])[1] || "2000-01-01";
+                const body = text.split('---')[1] || "";
+                return { ...f, title, date, body, ts: new Date(date.replace(/-/g,'/')).getTime() };
+            });
+
+            allFiles = (await Promise.all(detailedPromises)).sort((a,b) => b.ts - a.ts);
+            loader.style.display = 'none';
+            checkUpdate(); // 检查更新
+        } catch (e) {
+            console.error("加载失败", e);
+        }
+    }
+
+    // --- 分类切换 ---
+    function switchCategory(prefix) {
+        lastCategory = prefix;
+        const filtered = prefix === 'all' ? allFiles : allFiles.filter(f => f.name.startsWith(prefix));
+        const titles = { 'all':'全部文章', 'news_':'常规新闻', 'week_':'新闻周刊', 'poem_':'诗词鉴赏' };
+        document.getElementById('listTitle').innerText = titles[prefix] || "文章列表";
+        renderList(filtered);
+        showView('list');
+    }
+
+    // --- 渲染列表 ---
+    function renderList(data) {
+        const container = document.getElementById('listContainer');
+        container.innerHTML = data.map(f => `
+            <div class="news-item" onclick="renderDetail('${f.path}')">
+                <div>
+                    <div style="font-weight:bold; color:var(--scn-primary);">${f.title}</div>
+                    <div class="item-meta">${f.date}</div>
+                </div>
+                <i class="ri-arrow-right-line" style="color:#ccc"></i>
+            </div>
+        `).join('') || '<p style="text-align:center;color:#999;margin-top:50px;">暂无相关内容</p>';
+    }
+
+    // --- 全局搜索 ---
+    document.getElementById('globalSearch').addEventListener('input', (e) => {
+        const kw = e.target.value.toLowerCase();
+        if(!kw) { switchCategory('all'); return; }
+        const filtered = allFiles.filter(f => f.title.toLowerCase().includes(kw) || f.body.toLowerCase().includes(kw));
+        document.getElementById('listTitle').innerText = `搜索结果: ${kw}`;
+        renderList(filtered);
+        showView('list');
+    });
+
+    // --- 详情渲染 (包含图片解析) ---
+    async function renderDetail(path) {
+        const file = allFiles.find(f => f.path === path);
+        const container = document.getElementById('detailContainer');
+        
+        // 解析图片标签 <file/picture>...
+        let content = file.body.trim();
+        const imgRegex = /&lt;file\/picture&gt;(.*?)&gt;|<file\/picture>(.*?)>/g;
+        content = content.replace(imgRegex, (match, p1, p2) => {
+            const imgName = (p1 || p2).trim();
+            const url = `https://raw.githubusercontent.com/${CONFIG.user}/${CONFIG.repo}/main/${CONFIG.img_path}/${imgName}`;
+            return `<img src="${url}" class="article-img" alt="图片加载失败">`;
+        });
+
+        container.innerHTML = `
+            <h1 style="margin-top:0; color:var(--scn-primary);">${file.title}</h1>
+            <div style="color:var(--scn-sub); margin-bottom:20px; font-size:0.9rem;">
+                <i class="ri-calendar-line"></i> 发布时间：${file.date}
+            </div>
+            <div style="line-height:1.8; white-space:pre-wrap;">${content}</div>
+        `;
+        showView('detail');
+    }
+
+    // --- 检查更新 ---
+    async function checkUpdate() {
+        try {
+            const res = await fetch(`https://raw.githubusercontent.com/${CONFIG.user}/${CONFIG.repo}/main/software_information.txt`);
+            const text = await res.text();
+            const latestVer = (text.match(/VERSION:\s*(.*)/i) || [])[1];
+            const label = document.getElementById('latestVerLabel');
+            if(latestVer) {
+                label.innerText = latestVer;
+                if(latestVer.trim() !== CONFIG.currentVer) {
+                    label.innerHTML += `<span class="update-dot"></span> (发现新版本)`;
+                }
+            }
+        } catch(e) { console.error("版本检查失败"); }
+    }
+
+    // --- 彩蛋逻辑 ---
+    let clickCount = 0;
+    let clickTimer = null;
+    document.getElementById('mainLogo').addEventListener('click', () => {
+        clickCount++;
+        clearTimeout(clickTimer);
+        if(clickCount === 5) {
+            confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 }, colors: ['#0056b3', '#00a8ff', '#ffffff'] });
+            clickCount = 0;
+        }
+        clickTimer = setTimeout(() => { clickCount = 0; }, 2000);
+    });
+
+    // 启动
+    initData();
+</script>
+</body>
+</html>
