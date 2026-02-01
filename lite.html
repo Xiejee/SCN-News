@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SCN Lite 1.26.201</title>
+    <style>
+        /* 极致精简的样式，确保低端机流畅 */
+        body { 
+            font-family: sans-serif; 
+            background: #f0f0f0; 
+            margin: 0; 
+            padding: 10px; 
+            color: #333;
+        }
+        header { 
+            background: #0056b3; 
+            color: white; 
+            padding: 15px; 
+            border-radius: 8px; 
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        .version-tag { font-size: 0.8rem; opacity: 0.8; }
+        
+        .news-module {
+            background: white;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            border: 1px solid #ddd;
+        }
+        .news-module h2 { 
+            margin: 0 0 10px 0; 
+            font-size: 1.2rem; 
+            color: #0056b3; 
+            border-bottom: 1px solid #eee;
+            padding-bottom: 5px;
+        }
+        .meta { font-size: 0.75rem; color: #888; margin-bottom: 10px; }
+        .content { 
+            white-space: pre-wrap; 
+            line-height: 1.6; 
+            font-size: 0.95rem; 
+            word-wrap: break-word;
+        }
+        img { 
+            max-width: 100%; 
+            height: auto; 
+            border-radius: 4px; 
+            margin-top: 10px;
+            display: block;
+            background: #eee;
+        }
+        #loading { text-align: center; padding: 20px; color: #666; }
+        .error { color: red; background: #fee; padding: 10px; border-radius: 4px; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div style="font-size: 1.4rem; font-weight: bold;">SCN Lite</div>
+        <div class="version-tag">版本: 1.26.201 (调试版)</div>
+    </header>
+
+    <div id="loading">正在获取所有文件...</div>
+    <div id="main-list"></div>
+
+<script>
+    // 基础配置
+    const USER = 'Xiejee';
+    const REPO = 'SCN-News';
+    const FOLDER = 'news';
+
+    async function fetchLiteData() {
+        const listEl = document.getElementById('main-list');
+        const loadingEl = document.getElementById('loading');
+
+        try {
+            // 获取文件夹内所有文件列表
+            const apiUrl = `https://api.github.com/repos/${USER}/${REPO}/contents/${FOLDER}`;
+            const response = await fetch(apiUrl);
+            
+            if (!response.ok) throw new Error('无法连接到存储库');
+            
+            let files = await response.json();
+
+            // 按文件名倒序排列（新内容通常在后，或按时间戳命名）
+            files.sort((a, b) => b.name.localeCompare(a.name));
+
+            loadingEl.style.display = 'none';
+
+            for (const file of files) {
+                const ext = file.name.split('.').pop().toLowerCase();
+                const module = document.createElement('div');
+                module.className = 'news-module';
+
+                // 1. 如果是图片格式
+                if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) {
+                    module.innerHTML = `
+                        <h2>图片预览: ${file.name}</h2>
+                        <div class="meta">格式: ${ext.toUpperCase()} | 路径: ${file.path}</div>
+                        <img src="${file.download_url}" alt="加载失败">
+                    `;
+                } 
+                // 2. 如果是文本格式
+                else if (ext === 'txt') {
+                    try {
+                        const textRes = await fetch(file.download_url);
+                        const rawText = await textRes.text();
+                        
+                        // 简单解析标题和时间
+                        const titleMatch = rawText.match(/TITLE:\s*(.*)/i);
+                        const dateMatch = rawText.match(/DATE:\s*(.*)/i);
+                        const title = titleMatch ? titleMatch[1] : file.name;
+                        const date = dateMatch ? dateMatch[1] : '未知时间';
+                        const body = rawText.split('---')[1] || rawText;
+
+                        module.innerHTML = `
+                            <h2>${title}</h2>
+                            <div class="meta">发布时间: ${date} | 文件: ${file.name}</div>
+                            <div class="content">${body.trim()}</div>
+                        `;
+                    } catch (e) {
+                        module.innerHTML = `<h2>解析失败</h2><div class="content">${file.name} 内容读取错误</div>`;
+                    }
+                }
+                // 3. 其他格式文件
+                else {
+                    module.innerHTML = `
+                        <h2>未知格式文件</h2>
+                        <div class="meta">文件名: ${file.name}</div>
+                        <div class="content">此文件格式 (${ext}) 不支持直接预览。</div>
+                        <a href="${file.download_url}" target="_blank" style="font-size:0.8rem; color:#0056b3;">下载文件</a>
+                    `;
+                }
+
+                listEl.appendChild(module);
+            }
+        } catch (error) {
+            loadingEl.innerHTML = `<div class="error">加载失败: ${error.message}</div>`;
+        }
+    }
+
+    // 执行加载
+    fetchLiteData();
+</script>
+</body>
+</html>
