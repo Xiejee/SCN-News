@@ -1,6 +1,6 @@
 TITLE: test 20260307 0038
 DATE: 2026-03-06
 ---
-[a]https://github.com/Xiejee/SCN-News/blob/main/picture/ldy-capital.mp3[/a]
+[a]https://github.com/Xiejee/SCN-News/raw/main/picture/ldy-capital.mp3[/a]
 
 撰稿：管理员-02号
